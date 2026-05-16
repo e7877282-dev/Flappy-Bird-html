@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Flappy Bird</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: #333;
+      font-family: 'Arial', sans-serif;
+      overflow: hidden;
+    }
+    canvas {
+      border: 3px solid #555;
+      display: block;
+      cursor: pointer;
+    }
+    #scoreBoard {
+      position: absolute;
+      top: 20px;
+      color: #fff;
+      font-size: 24px;
+      text-shadow: 2px 2px 4px #000;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    #menu.hidden { display: none; }
+    #menu h1 {
+      color: #ffeb3b;
+      font-size: 48px;
+      margin-bottom: 50px;
+      text-shadow: 3px 3px 0 #000;
+    }
+    .menu-btn {
+      display: block;
+      width: 200px;
+      padding: 15px;
+      margin: 10px;
+      font-size: 20px;
+      text-align: center;
+      background: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      text-shadow: 1px 1px 0 #000;
+      transition: all 0.2s;
+    }
+    .menu-btn:hover {
+      background: #66bb6a;
+      transform: scale(1.05);
+    }
+    .menu-btn.exit { background: #f44336; }
+    .menu-btn.exit:hover { background: #ef5350; }
+    #settings, #skins {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      padding: 30px;
+      border-radius: 15px;
+      display: none;
+      z-index: 110;
+      min-width: 280px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    #settings.active, #skins.active { display: block; }
+    #settings h2, #skins h2 {
+      color: #ffeb3b;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 15px 0;
+      color: white;
+    }
+    .toggle {
+      width: 50px;
+      height: 25px;
+      background: #666;
+      border-radius: 15px;
+      position: relative;
+      cursor: pointer;
+    }
+    .toggle.on { background: #4caf50; }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 21px;
+      height: 21px;
+      border-radius: 50%;
+      background: white;
+      top: 2px;
+      left: 2px;
+      transition: left 0.2s;
+    }
+    .toggle.on::after { left: 27px; }
+    #close-settings, #close-skins {
+      margin-top: 20px;
+      background: #2196f3;
+    }
+    .skin-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      margin: 10px 0;
+      background: #444;
+      border-radius: 8px;
+      border: 2px solid transparent;
+    }
+    .skin-item.owned { border-color: #4caf50; }
+    .skin-item.equipped { border-color: #ffeb3b; box-shadow: 0 0 10px #ffeb3b; }
+    .skin-preview {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-right: 15px;
+    }
+    .skin-info { flex: 1; }
+    .skin-name { font-weight: bold; color: white; }
+    .skin-price { color: #ffeb3b; font-size: 14px; }
+    .skin-btn {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .skin-btn.buy { background: #4caf50; color: white; }
+    .skin-btn.equip { background: #2196f3; color: white; }
+    .skin-btn.equipped { background: #ffeb3b; color: #333; }
+    .coins-display {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      color: #ffeb3b;
+      font-size: 20px;
+      text-shadow: 2px 2px 0 #000;
+    }
+  </style>
+</head>
+<body>
+<div id="scoreBoard">Счёт: <span id="score">0</span></div>
+  <div class="coins-display">🪙 <span id="coins">0</span></div>
+  <div id="menu">
+    <h1>🐦 Flappy Bird</h1>
+    <button class="menu-btn" onclick="startGame()">Играть</button>
+    <button class="menu-btn" onclick="openSkins()">Скины</button>
+    <button class="menu-btn" onclick="openSettings()">Настройки</button>
+    <button class="menu-btn exit" onclick="exitGame()">Выйти</button>
+  </div>
+  <div id="settings">
+    <h2>Настройки</h2>
+    <div class="setting-row">
+      <span>Звук</span>
+      <div class="toggle" id="sound-toggle" onclick="toggleSound()"></div>
+    </div>
+    <button class="menu-btn" id="close-settings" onclick="closeSettings()">Назад</button>
+  </div>
+  <div id="skins">
+    <h2>Скины</h2>
+    <div id="skins-list"></div>
+    <button class="menu-btn" id="close-skins" onclick="closeSkins()">Назад</button>
+  </div>
+  <canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+canvas.width = 400;
+canvas.height = 600;
+
+const GRAVITY = 0.35;
+const JUMP = -6.2;
+const PIPE_SPEED = 2.5;
+const PIPE_WIDTH = 60;
+const PIPE_GAP = 150;
+const PIPE_INTERVAL = 1800;
+
+let bird, pipes = [], score = 0;
+let coins = parseInt(localStorage.getItem('fb_coins') || '0');
+let currentSkin = localStorage.getItem('fb_skin') || 'default';
+let gameState = 'start';
+let lastPipeTime = 0, animId;
+let gameSpeed = PIPE_SPEED;
+let pipeInterval = PIPE_INTERVAL;
+
+const skins = {
+  default: { name: 'Обычная', price: 0, color: '#ffd54f', owned: true, emoji: '🐦' },
+  red: { name: 'Красная', price: 50, color: '#ff5252', owned: false, emoji: '🟥' },
+  blue: { name: 'Синяя', price: 75, color: '#2196f3', owned: false, emoji: '🟦' },
+  purple: { name: 'Фиолетовая', price: 100, color: '#9c27b0', owned: false, emoji: '🟪' },
+  rainbow: { name: 'Радуга', price: 200, color: '#ffeb3b', owned: false, emoji: '🌈' }
+};
+
+function loadSkins() {
+  const saved = localStorage.getItem('fb_skins');
+  if (saved) {
+    const owned = JSON.parse(saved);
+    for (const id in owned) {
+      if (skins[id]) skins[id].owned = owned[id];
+    }
+  }
+}
+
+function saveSkins() {
+  const owned = {};
+  for (const id in skins) {
+    owned[id] = skins[id].owned;
+  }
+  localStorage.setItem('fb_skins', JSON.stringify(owned));
+}
+
+function updateCoinsDisplay() {
+  document.getElementById('coins').textContent = coins;
+}
+
+function drawBird() {
+  ctx.save();
+  ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
+  bird.rotation = Math.min(Math.max(bird.velocity * 3, -30), 60);
+  ctx.rotate(bird.rotation * Math.PI / 180);
+  ctx.fillStyle = skins[currentSkin]?.color || '#ffd54f';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 20, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#f57f17';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = '#ffb300';
+  ctx.beginPath();
+  ctx.ellipse(-10, 3, 12, 7, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(10, -6, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(12, -5, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#e53935';
+  ctx.beginPath();
+  ctx.moveTo(20, 0);
+  ctx.lineTo(32, 1);
+  ctx.lineTo(20, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function openSkins() {
+  document.getElementById('skins').classList.add('active');
+  renderSkins();
+}
+
+function closeSkins() {
+  document.getElementById('skins').classList.remove('active');
+}
+
+function renderSkins() {
+  const list = document.getElementById('skins-list');
+  list.innerHTML = '';
+  for (const id in skins) {
+    const skin = skins[id];
+    const div = document.createElement('div');
+    div.className = `skin-item ${skin.owned ? 'owned' : ''} ${currentSkin === id ? 'equipped' : ''}`;
+    div.innerHTML = `
+      <div class="skin-preview" style="background:${skin.color}"></div>
+      <div class="skin-info">
+        <div class="skin-name">${skin.emoji} ${skin.name}</div>
+        <div class="skin-price">${skin.price > 0 ? skin.price + ' 🪙' : 'Бесплатно'}</div>
+      </div>
+      <button class="skin-btn ${currentSkin === id ? 'equipped' : skin.owned ? 'equip' : 'buy'}" 
+              onclick="${skin.owned ? `equipSkin('${id}')` : `buySkin('${id}')`}">
+        ${currentSkin === id ? 'Экипировано' : skin.owned ? 'Экипировать' : 'Купить'}
+      </button>
+    `;
+    list.appendChild(div);
+  }
+}
+
+function buySkin(id) {
+  const skin = skins[id];
+  if (coins >= skin.price && !skin.owned) {
+    coins -= skin.price;
+    skin.owned = true;
+    saveSkins();
+    localStorage.setItem('fb_coins', coins);
+    updateCoinsDisplay();
+    renderSkins();
+    sounds.score();
+  }
+}
+
+function equipSkin(id) {
+  if (skins[id].owned) {
+    currentSkin = id;
+    localStorage.setItem('fb_skin', id);
+    renderSkins();
+  }
+}
+
+const birdImg = new Image();
+const birdReady = new Promise(r => { birdImg.onload = r; birdImg.src = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text y="32" font-size="32">🐦</text></svg>'); });
+
+function resetBird() {
+  bird = {
+    x: 80, y: canvas.height / 2,
+    width: 40, height: 34,
+    velocity: 0, rotation: 0
+  };
+}
+
+resetBird();
+
+function spawnPipe() {
+  const min = 80;
+  const max = canvas.height - 80 - PIPE_GAP;
+  const topH = Math.random() * (max - min) + min;
+  pipes.push({
+    x: canvas.width,
+    topH, bottomY: topH + PIPE_GAP,
+    passed: false, gapY: topH + PIPE_GAP / 2
+  });
+}
+
+function drawBackground() {
+  const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  sky.addColorStop(0, '#4ec0ca');
+  sky.addColorStop(0.55, '#87ceeb');
+  sky.addColorStop(1, '#ded895');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Clouds
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 6; i++) {
+    const cx = (i * 160 + Date.now() * 0.005) % (canvas.width + 200) - 100;
+    const cy = 30 + (i % 3) * 55;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 25, 0, Math.PI * 2);
+    ctx.arc(cx + 20, cy - 10, 30, 0, Math.PI * 2);
+    ctx.arc(cx + 40, cy, 25, 0, Math.PI * 2);
+    ctx.arc(cx + 20, cy + 10, 20, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Ground
+  const groundY = canvas.height - 80;
+  ctx.fillStyle = '#dee7b7';
+  ctx.fillRect(0, groundY, canvas.width, 80);
+  ctx.fillStyle = '#3e2723';
+  for (let i = 0; i < canvas.width + 30; i += 30) {
+    const offset = (Date.now() * gameSpeed * 0.3) % 30;
+    ctx.beginPath();
+    ctx.moveTo(i - offset, groundY);
+    ctx.lineTo(i + 5 - offset, 30 + groundY);
+    ctx.lineTo(i + 25 - offset, 30 + groundY);
+    ctx.lineTo(i + 30 - offset, groundY);
+    ctx.fill();
+  }
+  // Grass strip
+  ctx.fillStyle = '#7ec850';
+  ctx.fillRect(0, groundY, canvas.width, 10);
+  ctx.fillStyle = '#4caf50';
+  for (let i = 0; i < canvas.width; i += 20) {
+    ctx.beginPath();
+    ctx.arc(i + 10, groundY + 5, 8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawPipes() {
+  const bodyG = ctx.createLinearGradient(0, 0, PIPE_WIDTH, 0);
+  bodyG.addColorStop(0, '#2e7d32');
+  bodyG.addColorStop(0.3, '#4caf50');
+  bodyG.addColorStop(0.7, '#4caf50');
+  bodyG.addColorStop(1, '#1b5e20');
+  const capG = ctx.createLinearGradient(0, 0, PIPE_WIDTH, 0);
+  capG.addColorStop(0, '#388e3c');
+  capG.addColorStop(0.5, '#66bb6a');
+  capG.addColorStop(1, '#2e7d32');
+
+  pipes.forEach(pipe => {
+    // Top pipe
+    ctx.fillStyle = bodyG;
+    ctx.fillRect(pipe.x, 0, PIPE_WIDTH, pipe.topH);
+
+    // Top cap
+    ctx.fillStyle = capG;
+    ctx.fillRect(pipe.x - 5, pipe.topH - 30, PIPE_WIDTH + 10, 30);
+    ctx.strokeStyle = '#1b5e20';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(pipe.x - 5, pipe.topH - 30, PIPE_WIDTH + 10, 30);
+
+    // Bottom pipe
+    const bh = canvas.height - pipe.bottomY - 80;
+    ctx.fillStyle = bodyG;
+    ctx.fillRect(pipe.x, pipe.bottomY, PIPE_WIDTH, bh);
+
+    // Bottom cap
+    ctx.fillStyle = capG;
+    ctx.fillRect(pipe.x - 5, pipe.bottomY, PIPE_WIDTH + 10, 30);
+    ctx.strokeStyle = '#1b5e20';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(pipe.x - 5, pipe.bottomY, PIPE_WIDTH + 10, 30);
+  });
+}
+
+function checkCollision() {
+  const gY = canvas.height - 80;
+  if (bird.y + bird.height > gY || bird.y < 0) return true;
+  for (const pipe of pipes) {
+    const bLeft = bird.x, bRight = bird.x + bird.width;
+    const bTop = bird.y, bBottom = bird.y + bird.height;
+    if (bRight > pipe.x && bLeft < pipe.x + PIPE_WIDTH) {
+      if (bTop < pipe.topH || bBottom > pipe.bottomY) return true;
+    }
+  }
+  return false;
+}
+
+function drawScore() { document.getElementById('score').textContent = score; }
+
+// --- Sound System ---
+class SoundManager {
+    constructor() {
+        this.audioCtx = null;
+        this.enabled = localStorage.getItem('fb_sound') !== 'off';
+    }
+    init() {
+        try {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch(e) { this.enabled = false; }
+    }
+    beep(freq, dur, type='sine') {
+        if (!this.enabled || !this.audioCtx) return;
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        osc.frequency.value = freq;
+        osc.type = type;
+        gain.gain.setValueAtTime(0.3, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + dur);
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + dur);
+    }
+    jump() { this.beep(440, 0.1, 'square'); }
+    hit() { this.beep(150, 0.3, 'sawtooth'); }
+    score() { this.beep(660, 0.1, 'sine'); }
+    toggle() {
+        this.enabled = !this.enabled;
+        localStorage.setItem('fb_sound', this.enabled ? 'on' : 'off');
+    }
+}
+const sounds = new SoundManager();
+let bestScore = parseInt(localStorage.getItem('fb_best') || '0');
+
+function jump() {
+  if (gameState === 'playing') {
+    bird.velocity = JUMP;
+    sounds.jump();
+  }
+}
+
+function restart() {
+  gameState = 'playing';
+  pipes = []; score = 0;
+  gameSpeed = PIPE_SPEED; pipeInterval = PIPE_INTERVAL;
+  document.getElementById('score').textContent = score;
+  resetBird();
+  lastPipeTime = Date.now();
+  spawnPipe();
+  draw();
+}
+
+function menuScreen() {
+  document.getElementById('menu').classList.remove('hidden');
+  gameState = 'menu';
+  draw();
+}
+
+function startGame() {
+  document.getElementById('menu').classList.add('hidden');
+  if (!sounds.audioCtx) sounds.init();
+  gameState = 'playing';
+  pipes = []; score = 0;
+  gameSpeed = PIPE_SPEED; pipeInterval = PIPE_INTERVAL;
+  document.getElementById('score').textContent = score;
+  resetBird();
+  lastPipeTime = Date.now();
+  spawnPipe();
+  draw();
+  gameLoop();
+}
+
+function openSettings() {
+  document.getElementById('settings').classList.add('active');
+  document.getElementById('sound-toggle').classList.toggle('on', sounds.enabled);
+}
+
+function closeSettings() {
+  document.getElementById('settings').classList.remove('active');
+}
+
+function toggleSound() {
+  sounds.toggle();
+  document.getElementById('sound-toggle').classList.toggle('on', sounds.enabled);
+}
+
+function exitGame() {
+  alert('Спасибо за игру! До свидания!');
+  window.close();
+}
+
+function gameLoop() {
+  if (gameState !== 'playing') return;
+  const now = Date.now();
+  if (now - lastPipeTime > pipeInterval) {
+    spawnPipe();
+    lastPipeTime = now;
+  }
+  bird.velocity += GRAVITY;
+  bird.y += bird.velocity;
+  pipes.forEach(pipe => {
+    pipe.x -= gameSpeed;
+    if (!pipe.passed && pipe.x + PIPE_WIDTH < bird.x) {
+      pipe.passed = true;
+      score++;
+      coins += 10;
+      drawScore();
+      updateCoinsDisplay();
+      localStorage.setItem('fb_coins', coins);
+      sounds.score();
+      if (score % 5 === 0 && gameSpeed < 5) {
+        gameSpeed += 0.2;
+        pipeInterval = Math.max(1200, pipeInterval - 80);
+      }
+    }
+  });
+  pipes = pipes.filter(p => p.x > -PIPE_WIDTH - 10);
+  if (checkCollision()) {
+    gameState = 'gameover';
+    sounds.hit();
+    if (score > bestScore) {
+      bestScore = score;
+      localStorage.setItem('fb_best', bestScore);
+    }
+    draw();
+    menuScreen();
+    return;
+  }
+  draw();
+  animId = requestAnimationFrame(gameLoop);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawBackground();
+  drawPipes();
+  drawBird();
+  drawScore();
+}
+
+// --- Input ---
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); jump(); }
+});
+
+canvas.addEventListener('click', e => {
+  jump();
+});
+
+loadSkins();
+updateCoinsDisplay();
+draw();
+</script>
+</body>
+</html>
