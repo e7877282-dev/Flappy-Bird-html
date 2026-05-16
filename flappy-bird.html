@@ -208,7 +208,7 @@ const PIPE_INTERVAL = 1800;
 let bird, pipes = [], score = 0;
 let coins = parseInt(localStorage.getItem('fb_coins') || '0');
 let currentSkin = localStorage.getItem('fb_skin') || 'default';
-let gameState = 'start';
+let gameState = 'menu';
 let lastPipeTime = 0, animId;
 let gameSpeed = PIPE_SPEED;
 let pipeInterval = PIPE_INTERVAL;
